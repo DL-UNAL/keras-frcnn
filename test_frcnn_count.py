@@ -17,23 +17,13 @@ import datetime
 import re
 import subprocess
 
-parser = OptionParser()
-parser.add_option("-i", "--input_file", dest="input_file", help="Path to input video file.")
-parser.add_option("-o", "--output_file", dest="output_file", help="Path to output video file.", default="output.mp4")
-parser.add_option("-d", "--input_dir", dest="input_dir", help="Path to input working directory.", default="/home/ubuntu/input")
-parser.add_option("-u", "--output_dir", dest="output_dir", help="Path to output working directory.", default="/home/ubuntu/output")
-parser.add_option("-r", "--frame_rate", dest="frame_rate", help="Frame rate of the output video.", default=25.0)
 
-(options, args) = parser.parse_args()
-if not options.input_file:   # if filename is not given
-	parser.error('Error: path to video input_file must be specified. Pass --input-file to command line')
-
-input_video_file = options.input_file
-output_video_file = options.output_file
-img_path = os.path.join(options.input_dir, '')
-output_path = os.path.join(options.output_dir, '')
+input_video_file = os.path.abspath("../DATA/MOV_0840.mp4")
+output_video_file = os.path.abspath("../OUTPUT/output4.mp4")
+img_path = os.path.join("../OUTPUT/input", '')
+output_path = os.path.join("../OUTPUT/input", '')
 num_rois = 32
-frame_rate = float(options.frame_rate)
+frame_rate = 25
 
 def cleanup():
 	print("cleaning up...")
@@ -47,6 +37,16 @@ def get_file_names(search_path):
 
 def convert_to_images():
 	cam = cv2.VideoCapture(input_video_file)
+	counter = 0
+	
+	import skvideo.io
+	import skvideo.datasets
+	videodata = skvideo.io.vreader(input_video_file)
+	
+	for frame in videodata:
+		skvideo.io.vwrite(os.path.join(img_path, str(counter) + '.jpg'),frame)
+		counter = counter + 1
+	
 	counter = 0
 	while True:
 		flag, frame = cam.read()
@@ -107,7 +107,7 @@ def accumulate(l):
 def main():
 	cleanup()
 	sys.setrecursionlimit(40000)
-	config_output_filename = 'config.pickle'
+	config_output_filename = './keras_frcnn/config.pickle'
 
 	with open(config_output_filename, 'r') as f_in:
 		C = pickle.load(f_in)
