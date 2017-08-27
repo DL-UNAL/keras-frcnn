@@ -1,27 +1,30 @@
-import os
-import cv2
-import numpy as np
-import sys
-import pickle
-from optparse import OptionParser
-import time
+import datetime
 import itertools
 import operator
-from keras_frcnn import config
-import keras_frcnn.resnet as nn
+from optparse import OptionParser
+import os
+import pickle
+import re
+import subprocess
+import sys
+import time
+
+import cv2
 from keras import backend as K
 from keras.layers import Input
 from keras.models import Model
+import skvideo.io
+
+from keras_frcnn import config
 from keras_frcnn import roi_helpers
-import datetime
-import re
-import subprocess
+import keras_frcnn.resnet as nn
+import numpy as np
 
 
-input_video_file = os.path.abspath("../DATA/MOV_0840.mp4")
-output_video_file = os.path.abspath("../OUTPUT/output4.mp4")
+input_video_file = os.path.abspath("../DATA/MVI_6835.mp4")
+output_video_file = os.path.abspath("../OUTPUT/MVI_6835_out.mp4")
 img_path = os.path.join("../OUTPUT/input", '')
-output_path = os.path.join("../OUTPUT/input", '')
+output_path = os.path.join("../OUTPUT/output", '')
 num_rois = 32
 frame_rate = 25
 
@@ -33,25 +36,23 @@ def cleanup():
 def get_file_names(search_path):
 	for (dirpath, _, filenames) in os.walk(search_path):
 		for filename in filenames:
-			yield filename#os.path.join(dirpath, filename)
+			yield filename  # os.path.join(dirpath, filename)
 
 def convert_to_images():
 	cam = cv2.VideoCapture(input_video_file)
 	counter = 0
 	
-	import skvideo.io
-	import skvideo.datasets
 	videodata = skvideo.io.vreader(input_video_file)
 	
 	for frame in videodata:
-		skvideo.io.vwrite(os.path.join(img_path, str(counter) + '.jpg'),frame)
+		skvideo.io.vwrite(os.path.join(img_path, str(counter) + '.jpg'), frame)
 		counter = counter + 1
 	
 	counter = 0
 	while True:
 		flag, frame = cam.read()
 		if flag:
-			cv2.imwrite(os.path.join(img_path, str(counter) + '.jpg'),frame)
+			cv2.imwrite(os.path.join(img_path, str(counter) + '.jpg'), frame)
 			counter = counter + 1
 		else:
 			break
@@ -62,30 +63,28 @@ def convert_to_images():
 
 def save_to_video():
 	list_files = sorted(get_file_names(output_path), key=lambda var:[int(x) if x.isdigit() else x for x in re.findall(r'[^0-9]|[0-9]+', var)])
-	img0 = cv2.imread(os.path.join(output_path,'0.jpg'))
-	height , width , layers =  img0.shape
+	img0 = cv2.imread(os.path.join(output_path, '0.jpg'))
+	height , width , layers = img0.shape
+	
+	# start the FFmpeg writing subprocess with following parameters
+	writer = skvideo.io.FFmpegWriter(output_video_file, outputdict={
+  		'-vcodec': 'libx264', '-b': '300000000'}, verbosity=1)
 
-	# fourcc = cv2.cv.CV_FOURCC(*'mp4v')
-	fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-	#fourcc = cv2.cv.CV_FOURCC(*'XVID')
-	videowriter = cv2.VideoWriter(output_video_file,fourcc, frame_rate, (width,height))
-	for f in list_files:
-		print("saving..." + f)
-		img = cv2.imread(os.path.join(output_path, f))
-		videowriter.write(img)
-	videowriter.release()
-	cv2.destroyAllWindows()
+  	for file in list_files:
+  		frame = skvideo.io.vread(os.path.join(output_path, file))
+  		writer.writeFrame(frame)
+  	writer.close()
 
 def format_img(img, C):
 	img_min_side = float(C.im_size)
-	(height,width,_) = img.shape
+	(height, width, _) = img.shape
 
 	if width <= height:
-		f = img_min_side/width
+		f = img_min_side / width
 		new_height = int(f * height)
 		new_width = int(img_min_side)
 	else:
-		f = img_min_side/height
+		f = img_min_side / height
 		new_width = int(f * width)
 		new_height = int(img_min_side)
 	img = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
@@ -176,7 +175,7 @@ def main():
 			continue
 		print(img_name)
 		st = time.time()
-		filepath = os.path.join(img_path,img_name)
+		filepath = os.path.join(img_path, img_name)
 		img = cv2.imread(filepath)
 		X = format_img(img, C)
 
@@ -204,15 +203,15 @@ def main():
 		bboxes = {}
 		probs = {}
 
-		for jk in range(R.shape[0]//C.num_rois + 1):
-			ROIs = np.expand_dims(R[C.num_rois*jk:C.num_rois*(jk+1), :], axis=0)
+		for jk in range(R.shape[0] // C.num_rois + 1):
+			ROIs = np.expand_dims(R[C.num_rois * jk:C.num_rois * (jk + 1), :], axis=0)
 			if ROIs.shape[1] == 0:
 				break
 
-			if jk == R.shape[0]//C.num_rois:
-				#pad R
+			if jk == R.shape[0] // C.num_rois:
+				# pad R
 				curr_shape = ROIs.shape
-				target_shape = (curr_shape[0],C.num_rois,curr_shape[2])
+				target_shape = (curr_shape[0], C.num_rois, curr_shape[2])
 				ROIs_padded = np.zeros(target_shape).astype(ROIs.dtype)
 				ROIs_padded[:, :curr_shape[1], :] = ROIs
 				ROIs_padded[0, curr_shape[1]:, :] = ROIs[0, 0, :]
@@ -235,7 +234,7 @@ def main():
 
 				cls_num = np.argmax(P_cls[0, ii, :])
 				try:
-					(tx, ty, tw, th) = P_regr[0, ii, 4*cls_num:4*(cls_num+1)]
+					(tx, ty, tw, th) = P_regr[0, ii, 4 * cls_num:4 * (cls_num + 1)]
 					tx /= C.classifier_regr_std[0]
 					ty /= C.classifier_regr_std[1]
 					tw /= C.classifier_regr_std[2]
@@ -243,7 +242,7 @@ def main():
 					x, y, w, h = roi_helpers.apply_regr(x, y, w, h, tx, ty, tw, th)
 				except:
 					pass
-				bboxes[cls_name].append([16*x, 16*y, 16*(x+w), 16*(y+h)])
+				bboxes[cls_name].append([16 * x, 16 * y, 16 * (x + w), 16 * (y + h)])
 				probs[cls_name].append(np.max(P_cls[0, ii, :]))
 
 		all_dets = []
@@ -254,23 +253,23 @@ def main():
 
 			new_boxes, new_probs = roi_helpers.non_max_suppression_fast(bbox, np.array(probs[key]), overlap_thresh=0.5)
 			for jk in range(new_boxes.shape[0]):
-				(x1, y1, x2, y2) = new_boxes[jk,:]
+				(x1, y1, x2, y2) = new_boxes[jk, :]
 
-				cv2.rectangle(img_scaled,(x1, y1), (x2, y2), class_to_color[key],2)
+				cv2.rectangle(img_scaled, (x1, y1), (x2, y2), class_to_color[key], 2)
 
-				textLabel = '{}: {}'.format(key,int(100*new_probs[jk]))
-				all_dets.append((key,100*new_probs[jk]))
+				textLabel = '{}: {}'.format(key, int(100 * new_probs[jk]))
+				all_dets.append((key, 100 * new_probs[jk]))
 				all_objects.append((key, 1))
 
-				(retval,baseLine) = cv2.getTextSize(textLabel,cv2.FONT_HERSHEY_COMPLEX,1,1)
-				textOrg = (x1, y1-0)
+				(retval, baseLine) = cv2.getTextSize(textLabel, cv2.FONT_HERSHEY_COMPLEX, 1, 1)
+				textOrg = (x1, y1 - 0)
 
-				cv2.rectangle(img_scaled, (textOrg[0] - 5, textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (0, 0, 0), 2)
-				cv2.rectangle(img_scaled, (textOrg[0] - 5,textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (255, 255, 255), -1)
+				cv2.rectangle(img_scaled, (textOrg[0] - 5, textOrg[1] + baseLine - 5), (textOrg[0] + retval[0] + 5, textOrg[1] - retval[1] - 5), (0, 0, 0), 2)
+				cv2.rectangle(img_scaled, (textOrg[0] - 5, textOrg[1] + baseLine - 5), (textOrg[0] + retval[0] + 5, textOrg[1] - retval[1] - 5), (255, 255, 255), -1)
 				cv2.putText(img_scaled, textLabel, textOrg, cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 1)
 		print('Elapsed time = {}'.format(time.time() - st))
 		height, width, channels = img_scaled.shape
-		cv2.rectangle(img_scaled, (0,0), (width, 30), (0, 0, 0), -1)
+		cv2.rectangle(img_scaled, (0, 0), (width, 30), (0, 0, 0), -1)
 		cv2.putText(img_scaled, "Obj count: " + str(list(accumulate(all_objects))), (5, 19), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
 		cv2.imwrite(os.path.join(output_path, img_name), img_scaled)
 		print(all_dets)
@@ -278,4 +277,5 @@ def main():
 	save_to_video()
 
 if __name__ == '__main__':
-	main()
+	# main()
+	save_to_video()
