@@ -20,13 +20,13 @@ from keras_frcnn import roi_helpers
 import keras_frcnn.resnet as nn
 import numpy as np
 
-
-input_video_file = os.path.abspath("../DATA/MVI_6835.mp4")
-output_video_file = os.path.abspath("../OUTPUT/MVI_6835_out.mp4")
+videoName = "MOV_0837"
+input_video_file = os.path.abspath("../DATA/Videos/" + videoName + ".mp4")
+output_video_file = os.path.abspath("../OUTPUT/" + videoName + ".mp4")
 img_path = os.path.join("../OUTPUT/input", '')
 output_path = os.path.join("../OUTPUT/output", '')
 num_rois = 32
-frame_rate = 25
+frame_rate = 30
 
 def cleanup():
 	print("cleaning up...")
@@ -39,7 +39,6 @@ def get_file_names(search_path):
 			yield filename  # os.path.join(dirpath, filename)
 
 def convert_to_images():
-	cam = cv2.VideoCapture(input_video_file)
 	counter = 0
 	
 	videodata = skvideo.io.vreader(input_video_file)
@@ -48,18 +47,6 @@ def convert_to_images():
 		skvideo.io.vwrite(os.path.join(img_path, str(counter) + '.jpg'), frame)
 		counter = counter + 1
 	
-	counter = 0
-	while True:
-		flag, frame = cam.read()
-		if flag:
-			cv2.imwrite(os.path.join(img_path, str(counter) + '.jpg'), frame)
-			counter = counter + 1
-		else:
-			break
-		if cv2.waitKey(1) == 27:
-			break
-			# press esc to quit
-	cv2.destroyAllWindows()
 
 def save_to_video():
 	list_files = sorted(get_file_names(output_path), key=lambda var:[int(x) if x.isdigit() else x for x in re.findall(r'[^0-9]|[0-9]+', var)])
@@ -68,7 +55,7 @@ def save_to_video():
 	
 	# start the FFmpeg writing subprocess with following parameters
 	writer = skvideo.io.FFmpegWriter(output_video_file, outputdict={
-  		'-vcodec': 'libx264', '-b': '300000000'}, verbosity=1)
+  		'-vcodec': 'libx264', "-r":str(frame_rate)}, verbosity=1)
 
   	for file in list_files:
   		frame = skvideo.io.vread(os.path.join(output_path, file))
@@ -255,8 +242,8 @@ def main():
 			for jk in range(new_boxes.shape[0]):
 				(x1, y1, x2, y2) = new_boxes[jk, :]
 
-				cv2.rectangle(img_scaled, (x1, y1), (x2, y2), class_to_color[key], 2)
 
+				cv2.rectangle(img_scaled, (x1, y1), (x2, y2), class_to_color[key], 2)
 				textLabel = '{}: {}'.format(key, int(100 * new_probs[jk]))
 				all_dets.append((key, 100 * new_probs[jk]))
 				all_objects.append((key, 1))
@@ -277,5 +264,4 @@ def main():
 	save_to_video()
 
 if __name__ == '__main__':
-	# main()
-	save_to_video()
+	main()
