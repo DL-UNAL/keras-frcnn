@@ -21,7 +21,7 @@ import keras_frcnn.resnet as nn
 import numpy as np
 
 videoName = "MOV_0837"
-input_video_file = os.path.abspath("../DATA/Videos/" + videoName + ".mp4")
+input_video_file = os.path.abspath("../data/Videos/" + videoName + ".mp4")
 output_video_file = os.path.abspath("../OUTPUT/" + videoName + ".mp4")
 img_path = os.path.join("../OUTPUT/input", '')
 output_path = os.path.join("../OUTPUT/output", '')
@@ -91,9 +91,9 @@ def accumulate(l):
 		yield key, sum(item[1] for item in subiter)
 
 def main():
-	cleanup()
+	
 	sys.setrecursionlimit(40000)
-	config_output_filename = './keras_frcnn/config.pickle'
+	config_output_filename = './config.pickle'
 
 	with open(config_output_filename, 'r') as f_in:
 		C = pickle.load(f_in)
@@ -152,8 +152,7 @@ def main():
 
 	visualise = True
 
-	print("Converting video to images..")
-	convert_to_images()
+	
 	print("anotating...")
 
 	list_files = sorted(get_file_names(img_path), key=lambda var:[int(x) if x.isdigit() else x for x in re.findall(r'[^0-9]|[0-9]+', var)])
@@ -260,8 +259,15 @@ def main():
 		cv2.putText(img_scaled, "Obj count: " + str(list(accumulate(all_objects))), (5, 19), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
 		cv2.imwrite(os.path.join(output_path, img_name), img_scaled)
 		print(all_dets)
-	print("saving to video..")
-	save_to_video()
+	
 
 if __name__ == '__main__':
+	cleanup()
+	
+	print("Converting video to images..")
+	convert_to_images()
+	
 	main()
+	
+	print("saving to video..")
+	save_to_video()
