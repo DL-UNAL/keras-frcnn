@@ -1,26 +1,28 @@
-import random
-import pprint
-import sys
-import time
-import numpy as np
 from optparse import OptionParser
 import pickle
+import pprint
+import random
+import sys
+import time
 
 from keras import backend as K
-from keras.optimizers import Adam
 from keras.layers import Input
 from keras.models import Model
+from keras.optimizers import Adam
+from keras.utils import generic_utils
+
 from keras_frcnn import config, data_generators
 from keras_frcnn import losses as losses
 from keras_frcnn import resnet as nn
 import keras_frcnn.roi_helpers as roi_helpers
-from keras.utils import generic_utils
+import numpy as np
+
 
 sys.setrecursionlimit(40000)
 
 parser = OptionParser()
 
-parser.add_option("-p", "--path", dest="train_path", help="Path to training data.")
+parser.add_option("-p", "--path", dest="train_path", help="Path to training data.", default="../data")
 parser.add_option("-o", "--parser", dest="parser", help="Parser to use. One of simple or pascal_voc",
 				default="pascal_voc"),
 parser.add_option("-n", "--num_rois", dest="num_rois",
@@ -38,7 +40,7 @@ parser.add_option("--input_weight_path", dest="input_weight_path", help="Input p
 
 (options, args) = parser.parse_args()
 
-if not options.train_path:   # if filename is not given
+if not options.train_path:  # if filename is not given
 	parser.error('Error: path to training data must be specified. Pass --path to command line')
 
 if options.parser == 'pascal_voc':
@@ -78,7 +80,7 @@ print('Num classes (including bg) = {}'.format(len(classes_count)))
 config_output_filename = options.config_filename
 
 with open(config_output_filename, 'w') as config_f:
-	pickle.dump(C,config_f)
+	pickle.dump(C, config_f)
 	print('Config has been written to {}, and can be loaded when testing to ensure correct results'.format(config_output_filename))
 
 random.shuffle(all_imgs)
@@ -131,7 +133,7 @@ except:
 optimizer = Adam(lr=1e-4)
 optimizer_classifier = Adam(lr=1e-4)
 model_rpn.compile(optimizer=optimizer, loss=[losses.rpn_loss_cls(num_anchors), losses.rpn_loss_regr(num_anchors)])
-model_classifier.compile(optimizer=optimizer_classifier, loss=[losses.class_loss_cls, losses.class_loss_regr(len(classes_count)-1)], metrics={'dense_class_{}'.format(len(classes_count)): 'accuracy'})
+model_classifier.compile(optimizer=optimizer_classifier, loss=[losses.class_loss_cls, losses.class_loss_regr(len(classes_count) - 1)], metrics={'dense_class_{}'.format(len(classes_count)): 'accuracy'})
 model_all.compile(optimizer='sgd', loss='mae')
 
 epoch_length = 1000
@@ -157,7 +159,7 @@ for epoch_num in range(num_epochs):
 	while True:
 		try:
 			if len(rpn_accuracy_rpn_monitor) == epoch_length and C.verbose:
-				mean_overlapping_bboxes = float(sum(rpn_accuracy_rpn_monitor))/len(rpn_accuracy_rpn_monitor)
+				mean_overlapping_bboxes = float(sum(rpn_accuracy_rpn_monitor)) / len(rpn_accuracy_rpn_monitor)
 				rpn_accuracy_rpn_monitor = []
 				print('Average number of overlapping bounding boxes from RPN = {} for {} previous iterations'.format(mean_overlapping_bboxes, epoch_length))
 				if mean_overlapping_bboxes == 0:
@@ -196,10 +198,10 @@ for epoch_num in range(num_epochs):
 			rpn_accuracy_for_epoch.append((len(pos_samples)))
 
 			if C.num_rois > 1:
-				if len(pos_samples) < C.num_rois/2:
+				if len(pos_samples) < C.num_rois / 2:
 					selected_pos_samples = pos_samples.tolist()
 				else:
-					selected_pos_samples = np.random.choice(pos_samples, C.num_rois/2, replace=False).tolist()
+					selected_pos_samples = np.random.choice(pos_samples, C.num_rois / 2, replace=False).tolist()
 				try:
 					selected_neg_samples = np.random.choice(neg_samples, C.num_rois - len(selected_pos_samples), replace=False).tolist()
 				except:
@@ -254,7 +256,7 @@ for epoch_num in range(num_epochs):
 
 				if curr_loss < best_loss:
 					if C.verbose:
-						print('Total loss decreased from {} to {}, saving weights'.format(best_loss,curr_loss))
+						print('Total loss decreased from {} to {}, saving weights'.format(best_loss, curr_loss))
 					best_loss = curr_loss
 					model_all.save_weights(C.model_path)
 

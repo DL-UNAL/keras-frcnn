@@ -50,8 +50,6 @@ def convert_to_images():
 
 def save_to_video():
 	list_files = sorted(get_file_names(output_path), key=lambda var:[int(x) if x.isdigit() else x for x in re.findall(r'[^0-9]|[0-9]+', var)])
-	img0 = cv2.imread(os.path.join(output_path, '0.jpg'))
-	height , width , layers = img0.shape
 	
 	# start the FFmpeg writing subprocess with following parameters
 	writer = skvideo.io.FFmpegWriter(output_video_file, outputdict={
@@ -60,6 +58,7 @@ def save_to_video():
   	for file in list_files:
   		frame = skvideo.io.vread(os.path.join(output_path, file))
   		writer.writeFrame(frame)
+  		
   	writer.close()
 
 def format_img(img, C):

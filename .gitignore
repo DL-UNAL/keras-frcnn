@@ -91,4 +91,8 @@ ENV/
 # Eclipse settings 
 /.project
 /.pydevproject
+
+
+# Other files
+/config.pickle
 /model_frcnn.hdf5
