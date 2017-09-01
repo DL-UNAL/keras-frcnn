@@ -88,6 +88,10 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# hdf5
+*.h5
+*.hdf5
+
 # Eclipse settings 
 /.project
 /.pydevproject
@@ -95,4 +99,3 @@ ENV/
 
 # Other files
 /config.pickle
-/model_frcnn.hdf5

@@ -1,7 +1,7 @@
 import numpy as np
 import pdb
 import math
-import data_generators
+from . import data_generators
 import copy
 
 
@@ -25,6 +25,7 @@ def calc_iou(R, img_data, C, class_mapping):
 	y_class_num = []
 	y_class_regr_coords = []
 	y_class_regr_label = []
+	IoUs = [] # for debugging only
 
 	for ix in range(R.shape[0]):
 		(x1, y1, x2, y2) = R[ix, :]
@@ -47,6 +48,7 @@ def calc_iou(R, img_data, C, class_mapping):
 			w = x2 - x1
 			h = y2 - y1
 			x_roi.append([x1, y1, w, h])
+			IoUs.append(best_iou)
 
 			if C.classifier_min_overlap <= best_iou < C.classifier_max_overlap:
 				# hard negative example
@@ -85,13 +87,13 @@ def calc_iou(R, img_data, C, class_mapping):
 			y_class_regr_label.append(copy.deepcopy(labels))
 
 	if len(x_roi) == 0:
-		return None, None, None
+		return None, None, None, None
 
 	X = np.array(x_roi)
 	Y1 = np.array(y_class_num)
 	Y2 = np.concatenate([np.array(y_class_regr_label),np.array(y_class_regr_coords)],axis=1)
 
-	return np.expand_dims(X, axis=0), np.expand_dims(Y1, axis=0), np.expand_dims(Y2, axis=0)
+	return np.expand_dims(X, axis=0), np.expand_dims(Y1, axis=0), np.expand_dims(Y2, axis=0), IoUs
 
 def apply_regr(x, y, w, h, tx, ty, tw, th):
 	try:
@@ -135,8 +137,8 @@ def apply_regr_np(X, T):
 		cx1 = tx * w + cx
 		cy1 = ty * h + cy
 
-		w1 = np.exp(tw) * w
-		h1 = np.exp(th) * h
+		w1 = np.exp(tw.astype(np.float64)) * w
+		h1 = np.exp(th.astype(np.float64)) * h
 		x1 = cx1 - w1/2.
 		y1 = cy1 - h1/2.
 
@@ -172,6 +174,9 @@ def non_max_suppression_fast(boxes, probs, overlap_thresh=0.9, max_boxes=300):
 	# initialize the list of picked indexes	
 	pick = []
 
+	# calculate the areas
+	area = (x2 - x1) * (y2 - y1)
+
 	# sort the bounding boxes 
 	idxs = np.argsort(probs)
 
@@ -191,21 +196,16 @@ def non_max_suppression_fast(boxes, probs, overlap_thresh=0.9, max_boxes=300):
 		xx2_int = np.minimum(x2[i], x2[idxs[:last]])
 		yy2_int = np.minimum(y2[i], y2[idxs[:last]])
 
-		# find the union
-		xx1_un = np.minimum(x1[i], x1[idxs[:last]])
-		yy1_un = np.minimum(y1[i], y1[idxs[:last]])
-		xx2_un = np.maximum(x2[i], x2[idxs[:last]])
-		yy2_un = np.maximum(y2[i], y2[idxs[:last]])
-
-		# compute the width and height of the bounding box
 		ww_int = np.maximum(0, xx2_int - xx1_int)
 		hh_int = np.maximum(0, yy2_int - yy1_int)
 
-		ww_un = np.maximum(0, xx2_un - xx1_un)
-		hh_un = np.maximum(0, yy2_un - yy1_un)
+		area_int = ww_int * hh_int
+
+		# find the union
+		area_union = area[i] + area[idxs[:last]] - area_int
 
 		# compute the ratio of overlap
-		overlap = (ww_int*hh_int)/(ww_un*hh_un + 1e-9)
+		overlap = area_int/(area_union + 1e-6)
 
 		# delete all indexes from the index list that have
 		idxs = np.delete(idxs, np.concatenate(([last],
