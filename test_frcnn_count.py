@@ -24,8 +24,8 @@ video_folder = '../../Videos/Bog 2018 dev/'
 videoName = "MOV_0861"
 input_video_file = os.path.abspath(video_folder + videoName + ".mp4")
 output_video_file = os.path.abspath(video_folder + "OUTPUT/" + videoName + ".mp4")
-img_path = os.path.join(video_folder +"/OUTPUT/input", '')
-output_path = os.path.join(video_folder +"/OUTPUT/output", '')
+img_path = os.path.join(video_folder +"OUTPUT/input", '')
+output_path = os.path.join(video_folder +"OUTPUT/output", '')
 num_rois = 32
 frame_rate = 30
 
@@ -113,9 +113,9 @@ def main():
 	if 'bg' not in class_mapping:
 		class_mapping['bg'] = len(class_mapping)
 
-	class_mapping = {v: k for k, v in class_mapping.iteritems()}
+	class_mapping = {v: k for k, v in class_mapping.items()}
 	print(class_mapping)
-	class_to_color = {class_mapping[v]: np.random.randint(0, 255, 3) for v in class_mapping}
+	class_to_color = {class_mapping[v]: np.random.randint(0, 255, 3).tolist() for v in class_mapping}
 	C.num_rois = num_rois
 
 	if K.image_dim_ordering() == 'th':

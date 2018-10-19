@@ -1,3 +1,11 @@
+# Eclipse settings 
+/.project
+/.pydevproject
+
+
+# Other files
+/*.pickle
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -91,11 +99,3 @@ ENV/
 # hdf5
 *.h5
 *.hdf5
-
-# Eclipse settings 
-/.project
-/.pydevproject
-
-
-# Other files
-/config.pickle
