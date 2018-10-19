@@ -20,23 +20,27 @@ from keras_frcnn import roi_helpers
 import keras_frcnn.resnet as nn
 import numpy as np
 
-videoName = "MOV_0837"
-input_video_file = os.path.abspath("../data/Videos/" + videoName + ".mp4")
-output_video_file = os.path.abspath("../OUTPUT/" + videoName + ".mp4")
-img_path = os.path.join("../OUTPUT/input", '')
-output_path = os.path.join("../OUTPUT/output", '')
+video_folder = '../../Videos/Bog 2018 dev/'
+videoName = "MOV_0861"
+input_video_file = os.path.abspath(video_folder + videoName + ".mp4")
+output_video_file = os.path.abspath(video_folder + "OUTPUT/" + videoName + ".mp4")
+img_path = os.path.join(video_folder +"/OUTPUT/input", '')
+output_path = os.path.join(video_folder +"/OUTPUT/output", '')
 num_rois = 32
 frame_rate = 30
+
 
 def cleanup():
 	print("cleaning up...")
 	os.popen('rm -f ' + img_path + '*')
 	os.popen('rm -f ' + output_path + '*')
 
+
 def get_file_names(search_path):
 	for (dirpath, _, filenames) in os.walk(search_path):
 		for filename in filenames:
 			yield filename  # os.path.join(dirpath, filename)
+
 
 def convert_to_images():
 	counter = 0
@@ -55,11 +59,12 @@ def save_to_video():
 	writer = skvideo.io.FFmpegWriter(output_video_file, outputdict={
   		'-vcodec': 'libx264', "-r":str(frame_rate)}, verbosity=1)
 
-  	for file in list_files:
-  		frame = skvideo.io.vread(os.path.join(output_path, file))
-  		writer.writeFrame(frame)
-  		
-  	writer.close()
+	for file in list_files:
+		frame = skvideo.io.vread(os.path.join(output_path, file))
+		writer.writeFrame(frame)
+		
+	writer.close()
+
 
 def format_img(img, C):
 	img_min_side = float(C.im_size)
@@ -84,17 +89,19 @@ def format_img(img, C):
 	img = np.expand_dims(img, axis=0)
 	return img
 
+
 def accumulate(l):
-    it = itertools.groupby(l, operator.itemgetter(0))
-    for key, subiter in it:
+	it = itertools.groupby(l, operator.itemgetter(0))
+	for key, subiter in it:
 		yield key, sum(item[1] for item in subiter)
+
 
 def main():
 	
 	sys.setrecursionlimit(40000)
 	config_output_filename = './config.pickle'
 
-	with open(config_output_filename, 'r') as f_in:
+	with open(config_output_filename, 'rb') as f_in:
 		C = pickle.load(f_in)
 
 	# turn off any data augmentation at test time
@@ -117,7 +124,6 @@ def main():
 	else:
 		input_shape_img = (None, None, 3)
 		input_shape_features = (None, None, 1024)
-
 
 	img_input = Input(shape=input_shape_img)
 	roi_input = Input(shape=(C.num_rois, 4))
@@ -150,7 +156,6 @@ def main():
 	bbox_threshold = 0.8
 
 	visualise = True
-
 	
 	print("anotating...")
 
@@ -176,7 +181,6 @@ def main():
 
 		# get the feature maps and output from the RPN
 		[Y1, Y2, F] = model_rpn.predict(X)
-
 
 		R = roi_helpers.rpn_to_roi(Y1, Y2, C, K.image_dim_ordering(), overlap_thresh=0.7)
 
@@ -240,7 +244,6 @@ def main():
 			for jk in range(new_boxes.shape[0]):
 				(x1, y1, x2, y2) = new_boxes[jk, :]
 
-
 				cv2.rectangle(img_scaled, (x1, y1), (x2, y2), class_to_color[key], 2)
 				textLabel = '{}: {}'.format(key, int(100 * new_probs[jk]))
 				all_dets.append((key, 100 * new_probs[jk]))
@@ -266,6 +269,7 @@ if __name__ == '__main__':
 	print("Converting video to images..")
 	convert_to_images()
 	
+	print("Main ...")
 	main()
 	
 	print("saving to video..")
