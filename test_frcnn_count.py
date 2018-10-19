@@ -1,11 +1,8 @@
-import datetime
 import itertools
 import operator
-from optparse import OptionParser
 import os
 import pickle
 import re
-import subprocess
 import sys
 import time
 
@@ -15,12 +12,11 @@ from keras.layers import Input
 from keras.models import Model
 import skvideo.io
 
-from keras_frcnn import config
 from keras_frcnn import roi_helpers
 import keras_frcnn.resnet as nn
 import numpy as np
 
-video_folder = '../../Videos/Bog 2018 dev/'
+video_folder = '../../Videos/'
 videoName = "MOV_0861"
 input_video_file = os.path.abspath(video_folder + videoName + ".mp4")
 output_video_file = os.path.abspath(video_folder + "OUTPUT/" + videoName + ".mp4")
@@ -149,13 +145,9 @@ def main():
 	model_rpn.compile(optimizer='sgd', loss='mse')
 	model_classifier.compile(optimizer='sgd', loss='mse')
 
-	all_imgs = []
-
-	classes = {}
 
 	bbox_threshold = 0.8
 
-	visualise = True
 	
 	print("anotating...")
 
