@@ -27,4 +27,11 @@ Example usage:
 python test_frcnn_count.py --input_file ~/videos/MVI_6848.mp4 --output_file ~/output4.mp4 --frame_rate=25
 ```
 
-For usage in training please see the oryginal project GitHub page. 
+For usage in training please see the original project GitHub page.
+
+## Install from local folder
+
+Run: 
+```bash
+pip install .
+```
